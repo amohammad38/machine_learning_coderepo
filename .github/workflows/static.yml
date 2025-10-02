@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Proposal — Hit Prediction with MSD</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; color:#111; }
+    h1, h2, h3 { line-height: 1.25; }
+    hr { border: 0; border-top: 1px solid #e5e7eb; margin: 2rem 0; }
+    ul, ol { padding-left: 1.2rem; }
+    blockquote { margin: 0.75rem 0; padding-left: 1rem; border-left: 4px solid #e5e7eb; color:#444; }
+    .small { color:#666; }
+    a { color:#0b5fff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<h1>Introduction / Background</h1>
+
+<h3>Literature Review</h3>
+<p>
+  Previous papers either predict the number of streams a song will have (regression) or simply label them as a “hit” or “non-hit.” The Million Song Dataset, however, provides audio features and metadata, which, combined with listener signals from the Echo Nest Taste Profile subset and crowd tags from Last.fm, our prediction results can improve greatly. This is important because “as Spotify has become more data driven, music itself has also become more an object which can be seen as aggregated data points such as how vocal is a song or how popular is a particular artist” <span class="small">[1]</span>, making the result that comes from these data findings all the more peculiar.
+</p>
+<p>
+  We plan on using the Million Song Dataset (MSD), which is a public collection of track-level audio features and metadata. This is paired with user/listening signals and tags to understand popularity. MSD also provides summaries on tempo, loudness, year, artist, etc., to better help us predict hits. This data set is quite helpful in that aspect since “when seeking to predict songs, this approach has typically used audio elements such as tempo, time signature, length, loudness, genre, lyric sentimentality, and instrument types” <span class="small">[2]</span>.
+</p>
+<p>
+  To approximate popularity, we will experiment with the play counts from the Echo Nest Taste Profile subset and tag- or platform-based popularity proxies. In other words, the ENTP subset lists data in the form of user, song, and plays, and we sum plays across all users for each song to get a popularity score (PS). If this data for the PS is not available, we can use “proxies,” or other forms of measurement such as Spotify popularity scores, or the amount of tags the artist has on Last.fm.
+</p>
+<p>
+  We aim to start with transparent linear baselines, compare gradient-boosted trees, and use temporal splits, so training does not leak information from later years. And also “in this ocean of new songs, there is a growing need for efficient selection and filtering, and the markets for attention have become increasingly competitive” <span class="small">[3]</span>, making it almost necessary for a way to parse through this data.
+</p>
+
+<p><strong>Dataset links (public):</strong><br/>
+  <a href="https://the.echonest.com/press-release/the-echo-nest-and-columbia-university-announce-million-song-dataset/">https://the.echonest.com/press-release/the-echo-nest-and-columbia-university-announce-million-song-dataset/</a>
+</p>
+
+<hr/>
+
+<h1>Problem Definition</h1>
+<p><strong>Problem:</strong> Given track-level audio features, metadata, and listener/tag signals, how popular a song will be?</p>
+<p>Regress total play counts and classify whether a track will fall into the top-k% or not.</p>
+<p><strong>Motivation:</strong> Accurately predicting popularity can have widespread benefits, from artists who can better plan marketing to people in all industries who need to understand what music is appropriate for what occasion.</p>
+
+<hr/>
+
+<h1>Methods</h1>
+
+<h3>Data Pre-processing</h3>
+<ul>
+  <li><strong>Clean &amp; impute:</strong> join MSD/Echo Nest/Last.fm to fill any missing values so models don’t break and patterns aren’t skewed by gaps.</li>
+  <li><strong>Encode &amp; Scale:</strong> turn categories into model-friendly numbers, so models can learn fair patterns instead of being dominated by large-magnitude features.</li>
+  <li><strong>Feature engineering:</strong> log-transform play counts to tame extreme outliers and convert tags into compact signals that summarize genre. This will make the target easier to predict.</li>
+</ul>
+
+<h3>Supervised Models</h3>
+<ul>
+  <li><strong>Elastic Net (regression):</strong> simple, interpretable, shows which features correlate with popularity.</li>
+  <li><strong>Gradient boosting:</strong> captures nonlinear interactions (how tempo, loudness, era, tags, all factor in), which helps to deliver accuracy on tabular data.</li>
+  <li><strong>Random Forest:</strong> reduces overfitting by averaging decision trees; provides feature-importance signals.</li>
+</ul>
+
+<hr/>
+
+<h1>(Potential) Results &amp; Discussion</h1>
+
+<h3>Predicting point forecasts</h3>
+<p>We want to model log playcount as a numeric target.</p>
+<ul>
+  <li><strong>RMSE</strong> (root mean squared error) — consistent for the mean target and penalizes large misses. This is good when we care about big errors.</li>
+  <li><strong>MAE</strong> (mean absolute error) — size of the typical miss to be more robust to outliers.</li>
+  <li><strong>R&sup2;</strong> — fraction of variance explained to help with model-to-model comparison.</li>
+</ul>
+
+<h3>Predicting hit probabilities</h3>
+<ul>
+  <li><strong>Log loss</strong> or <strong>Brier score</strong> — reward calibrated probabilities.</li>
+</ul>
+
+<h3>Decision-making: acting on top picks</h3>
+<p>What songs will actually be pushed out (limited promo slot budget N)?</p>
+<ul>
+  <li><strong>Precision@N</strong> — of the N tracks that are pushed, how many are hits?</li>
+  <li><strong>PR-AUC</strong> — ranking quality when hits are rare to focus on precision.</li>
+  <li><strong>Calibration check</strong> — reliability curve/Brier decomposition to ensure probabilities are true.</li>
+</ul>
+
+<hr/>
+
+<h1>Project Goals</h1>
+<ul>
+  <li><strong>Forecasting accuracy (regression):</strong> beat a baseline by about 15% on typical error, and bring down average misses. Explain 40%+ of the variation in playcounts.</li>
+  <li><strong>Hit detection (classification):</strong> do better than a trivial baseline on probability quality. PR-AUC &ge; 0.50. Have our top 100 picks be about 70% of the actual hits.</li>
+  <li><strong>Probability honesty (calibration):</strong> have the smallest error possible between percent chance of a hit and actual occurrence of hit.</li>
+  <li><strong>Realistic testing (validity):</strong> use older music first, then newer music — to match the realistic course of time.</li>
+</ul>
+
+<hr/>
+
+<h1>Expected Results</h1>
+<ul>
+  <li><strong>Models:</strong> gradient-boosted trees outperform elastic net, random forest is close behind.</li>
+  <li><strong>Signals:</strong> adding listener counts and tags beats audio-only features.</li>
+  <li><strong>Generalization:</strong> scores under temporal splits are lower than random splits.</li>
+  <li><strong>Ethics:</strong> note popularity biases in implicit feedback and keep training compute modest.</li>
+</ul>
+
+<hr/>
+
+<h1>References (IEEE)</h1>
+<ol>
+  <li>N. Sebastian, Jung, and F. Mayer, “Beyond Beats: A Recipe to Song Popularity? A machine learning approach,” <em>arXiv.org</em>, 2024. <a href="https://arxiv.org/abs/2403.12079?utm_source">https://arxiv.org/abs/2403.12079?utm_source</a></li>
+  <li>S. H. Merritt, K. Gaffuri, and P. J. Zak, “Accurately predicting hit songs using neurophysiology and machine learning,” <em>Frontiers in Artificial Intelligence</em>, vol. 6, p. 1154663, 2023, doi: <a href="https://doi.org/10.3389/frai.2023.1154663">https://doi.org/10.3389/frai.2023.1154663</a>.</li>
+  <li>N. Reisz, Vito, and S. Thurner, “To what extent homophily and influencer networks explain song popularity,” <em>arXiv.org</em>, 2022. <a href="https://arxiv.org/abs/2211.15164?utm_source">https://arxiv.org/abs/2211.15164?utm_source</a> (accessed Oct. 02, 2025).</li>
+</ol>
+
+</body>
+</html>
