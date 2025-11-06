@@ -1,0 +1,5 @@
+data/raw/
+.venv/
+*.tar.gz
+*.zip
+__pycache__/
