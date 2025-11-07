@@ -1,15 +1,38 @@
-# Midterm Checkpoint (CS 4741/4641)
-Pipeline to merge MSD + Taste Profile, then train ElasticNet vs HistGradientBoosting on a temporal split.
+# Midterm Checkpoint — Song Popularity (CS 4741/4641)
 
-**How to run**
+Goal
+----
+Predict song popularity (log1p playcount) from Million Song Dataset (MSD) metadata and Echo Nest Taste Profile signals. Compare a linear baseline with a tree model using a temporal split (train ≤ 2008, test > 2008).
 
-cat > midterm/README.md << 'MD'
-Pipeline to merge MSD + Taste Profile, then train ElasticNet vs HistGradientBoosting on a temporal split.
+Links
+-----
+- GitHub Pages (report): https://github.gatech.edu/pages/amohammad38/ml_projectpage.github.io/
+- Repository: this repo (private; mentor added as collaborator)
 
-**How to run**
+Repository structure
+--------------------
+- midterm/run_midterm.py — trains Elastic Net and Histogram Gradient Boosting on midterm/data/working/merged.csv; saves plots and metrics
+- midterm/make_merged_from_msd.py — builds midterm/data/working/merged.csv from raw MSD files (track_metadata.db, unique_tracks.txt, train_triplets.txt)
+- midterm/data/working/merged.csv — merged dataset ready for modeling (committed)
+- midterm/figs/ — output figures and metrics_summary.txt
+- midterm/requirements.txt — Python dependencies
+- data/raw/ — place large raw inputs here if rebuilding merged.csv (not tracked by git)
+- _config.yml — GitHub Pages configuration
 
-**Results (temporal test >2008)**
-- Elastic Net: RMSE 1.2957, MAE 1.0464, R² 0.1768  
-- HistGB: RMSE 1.2312, MAE 0.9778, R² 0.2568
+Quick start (use committed dataset)
+-----------------------------------
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r midterm/requirements.txt
 
-Figures in `midterm/figs/`.
+python midterm/run_midterm.py \
+  --data midterm/data/working/merged.csv \
+  --year_col year \
+  --playcount_col playcount \
+  --numeric_cols duration,year,artist_familiarity,artist_hotttnesss \
+  --train_end_year 2008
+
+open midterm/figs/reg_pred_actual_scatter.png
+open midterm/figs/reg_resid_hist.png
+cat midterm/figs/metrics_summary.txt
