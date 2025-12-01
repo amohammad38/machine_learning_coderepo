@@ -1,0 +1,4 @@
+model	RMSE	MAE	R2
+ElasticNet	1.2957	1.0464	0.1768
+HistGB	1.2312	0.9778	0.2568
+RandomForest	1.2506	0.9877	0.2332
