@@ -1,0 +1,50 @@
+name: Deploy static site to Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: [self-hosted, macOS, X64]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # --- key fix: make Homebrew GNU tar available to the job ---
+      - name: Ensure GNU tar in PATH (mac self-hosted)
+        run: |
+          echo "/opt/homebrew/bin" >> $GITHUB_PATH
+          echo "/opt/homebrew/opt/gnu-tar/libexec/gnubin" >> $GITHUB_PATH
+          which gtar || true
+          gtar --version || true
+      # -----------------------------------------------------------
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: List site files (sanity check)
+        run: ls -la
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .   # index.html is at repo root
+
+      - name: Deploy to Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

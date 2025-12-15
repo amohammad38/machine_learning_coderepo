@@ -1,0 +1,8 @@
+data/raw/
+.venv/
+*.tar.gz
+*.zip
+__pycache__/
+
+# accidental files
+*ssh-agent*
