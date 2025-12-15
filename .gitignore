@@ -3,3 +3,6 @@ data/raw/
 *.tar.gz
 *.zip
 __pycache__/
+
+# accidental files
+*ssh-agent*
